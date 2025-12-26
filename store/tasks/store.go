@@ -16,7 +16,7 @@ func GetTaskByID(db *gorm.DB, id string) (Task, error) {
 func GetAllTasks(db *gorm.DB) ([]Task, error) {
 	log.Default().Println("Fetching all tasks")
 	var tasksList []Task
-	result := db.Order("created_at desc").Find(&tasksList)
+	result := db.Find(&tasksList)
 	return tasksList, result.Error
 }
 
@@ -26,15 +26,14 @@ func CreateTask(db *gorm.DB, newTask Task) (Task, error) {
 	return newTask, result.Error
 }
 
-func UpdateTaskByID(db *gorm.DB, id string, updatedData UpdateTask) error {
-	log.Default().Println("Fetching task for update with ID:", id)
-	var task Task
-	if err := db.First(&task, id).Error; err != nil {
-		return err
+func UpdateTaskByID(db *gorm.DB, id string, updatedData UpdateTask) (Task, error) {
+	log.Default().Println("Updating task with ID:", id)
+	err := db.Model(&Task{}).Where("id = ?", id).Updates(&updatedData).Error
+	if err != nil {
+		return Task{}, err
 	}
 
-	log.Default().Println("Updating task with ID:", id)
-	return db.Model(&task).Updates(updatedData).Error
+	return GetTaskByID(db, id)
 }
 
 func DeleteTaskByID(db *gorm.DB, id string) error {
