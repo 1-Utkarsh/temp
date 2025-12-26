@@ -16,16 +16,17 @@ func Routes() http.Handler {
 	r.Get("/{id}", GetTasksByIdHandler)
 	r.Get("/", GetAllTasksHandler)
 	r.Post("/tasks", CreateTasksHandler)
+
 	return r
 }
 
 type TaskResponse struct {
-	Task  tasks.Task
+	Task  *tasks.Task
 	Error *util.ErrorResponse
 }
 
 type AllTasksResponse struct {
-	Tasks []tasks.Task
+	Tasks *[]tasks.Task
 	Error *util.ErrorResponse
 }
 
@@ -36,7 +37,6 @@ func GetTasksByIdHandler(w http.ResponseWriter, r *http.Request) {
 	var taskRes TaskResponse
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		taskRes.Task = tasks.Task{}
 		taskRes.Error = &util.ErrorResponse{Message: "Empty task id provided", Code: http.StatusBadRequest}
 		data, _ := json.Marshal(taskRes)
 		w.WriteHeader(http.StatusBadRequest)
@@ -46,8 +46,13 @@ func GetTasksByIdHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Default().Println("Fetching task with ID:", id)
 	t, err := tasks.GetTaskByID(db, id)
-	if err != nil {
-		taskRes.Task = tasks.Task{}
+	if err.Error() == "record not found" {
+		taskRes.Error = &util.ErrorResponse{Message: "Task not found", Code: http.StatusNotFound}
+		data, _ := json.Marshal(taskRes)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write(data)
+		return
+	} else if err != nil {
 		taskRes.Error = &util.ErrorResponse{Message: err.Error(), Code: http.StatusInternalServerError}
 		data, _ := json.Marshal(taskRes)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -55,7 +60,7 @@ func GetTasksByIdHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskRes.Task = t
+	taskRes.Task = &t
 	taskRes.Error = nil
 
 	data, _ := json.Marshal(taskRes)
@@ -73,7 +78,6 @@ func GetAllTasksHandler(w http.ResponseWriter, r *http.Request) {
 	var tasksList []tasks.Task
 	result := db.Find(&tasksList)
 	if result.Error != nil {
-		allTasksRes.Tasks = []tasks.Task{}
 		allTasksRes.Error = &util.ErrorResponse{Message: result.Error.Error(), Code: http.StatusInternalServerError}
 		data, _ := json.Marshal(allTasksRes)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -81,7 +85,7 @@ func GetAllTasksHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	allTasksRes.Tasks = tasksList
+	allTasksRes.Tasks = &tasksList
 	allTasksRes.Error = nil
 
 	data, _ := json.Marshal(allTasksRes)
@@ -99,7 +103,6 @@ func CreateTasksHandler(w http.ResponseWriter, r *http.Request) {
 	var newTask tasks.Task
 	err := json.NewDecoder(r.Body).Decode(&newTask)
 	if err != nil {
-		taskRes.Task = tasks.Task{}
 		taskRes.Error = &util.ErrorResponse{Message: "Invalid request body", Code: http.StatusBadRequest}
 		data, _ := json.Marshal(taskRes)
 		w.WriteHeader(http.StatusBadRequest)
@@ -110,7 +113,6 @@ func CreateTasksHandler(w http.ResponseWriter, r *http.Request) {
 	log.Default().Println("Creating new task:", newTask)
 	t, err := tasks.CreateTask(db, newTask)
 	if err != nil {
-		taskRes.Task = tasks.Task{}
 		taskRes.Error = &util.ErrorResponse{Message: err.Error(), Code: http.StatusInternalServerError}
 		data, _ := json.Marshal(taskRes)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -118,7 +120,7 @@ func CreateTasksHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	taskRes.Task = t
+	taskRes.Task = &t
 	taskRes.Error = nil
 
 	data, _ := json.Marshal(taskRes)
