@@ -1,9 +1,12 @@
 package router
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/1-Utkarsh/temp/api/tasks"
+	db "github.com/1-Utkarsh/temp/store"
+	"github.com/1-Utkarsh/temp/util"
 	"github.com/go-chi/chi"
 )
 
@@ -11,13 +14,19 @@ import (
 func InitRoutes() http.Handler {
 	r := chi.NewRouter()
 
-	r.Route("/api", func(r chi.Router) {
-		// API routes
-		r.Route("/v1", func(r chi.Router) {
-			// v1 routes
-			// tasks endpoints
-			r.Mount("/tasks", tasks.Routes())
+	// Pass db connection via middleware
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), util.DbKey, db.GetDB())
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	})
+
+	// API routes
+	r.Route("/", func(r chi.Router) {
+		// tasks endpoints
+		r.Mount("/tasks", tasks.Routes())
+	})
+
 	return r
 }
