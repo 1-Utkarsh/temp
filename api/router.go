@@ -7,6 +7,7 @@ import (
 	"github.com/go-chi/chi"
 )
 
+// InitRoutes initializes the API routes and returns the router
 func InitRoutes() http.Handler {
 	r := chi.NewRouter()
 
@@ -14,6 +15,7 @@ func InitRoutes() http.Handler {
 		// API routes
 		r.Route("/v1", func(r chi.Router) {
 			// v1 routes
+			// tasks endpoints
 			r.Mount("/tasks", tasks.Routes())
 		})
 	})
