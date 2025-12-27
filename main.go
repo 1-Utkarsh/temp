@@ -9,6 +9,7 @@ import (
 	db "github.com/1-Utkarsh/temp/store"
 )
 
+// keeping solution simple as requested without much features and tests
 func main() {
 	log.Default().Println("Application started")
 	// initialize configuration
